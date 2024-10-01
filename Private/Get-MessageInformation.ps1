@@ -1,22 +1,30 @@
 function Get-MessageInformation {
 	[CmdletBinding()]
 	param (
-		[parameter()][string]$MessageID = ""
+		[parameter()]
+		[string]$MessageID = ""
 	)
+
 	Write-Log -Message "(Get-MessageInformation): MessageID = $MessageID"
+
 	try {
+
 		if (![string]::IsNullOrEmpty($MessageID)) {
 			Write-Log -Message "looking up information for error messageID = $MessageID" -LogFile $logfile
 			$msg = $MessagesXML.dtsHealthCheck.Message | Where-Object {$_.MessageId -eq $MessageID}
+
 			if ($null -eq $msg) {
 				Write-Log -Message "searching windows update error table" -LogFile $logfile
 				$errcodes = Join-Path $(Split-Path (Get-Module "cmhealthcheck").Path) -ChildPath "assets\windows_update_errorcodes.csv"
+
 				if (Test-Path $errcodes) {
 					Write-Log -Message "importing lookup data" -LogFile $logfile
 					$errdata = Import-Csv -Path $errcodes
 					$errdet = $($errdata | Where-Object {$_.ErrorCode -eq $MessageID} | Select-Object -ExpandProperty Description).Trim()
+
 					if ([string]::IsNullOrEmpty($errdet)) {
 						$errdet = $($errdata | Where-Object {$_.DecErrorCode -eq $MessageID} | Select-Object -ExpandProperty Description).Trim()
+						
 						if (![string]::IsNullOrEmpty($errdet)) {
 							Write-Output $errdet
 						}

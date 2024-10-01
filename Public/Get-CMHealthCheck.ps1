@@ -65,17 +65,24 @@ function Get-CMHealthCheck {
 
 	$startTime      = Get-Date
 	$currentFolder  = (Get-Location).Path
-	if ($currentFolder.substring($currentFolder.Length-1) -ne '\') { $currentFolder+= '\' }
+
+	if ($currentFolder.substring($currentFolder.Length-1) -ne '\') { 
+		$currentFolder+= '\' 
+	}
+	
 	$logFolder      = "$OutputFolder\_Logs\"
 	$reportFolder   = "$OutputFolder\$(Get-Date -UFormat "%Y-%m-%d")\$SmsProvider\"
+
 	if (-not(Test-Path $logFolder)) {
 		Write-Log -Message "creating log folder: $logFolder"
 		mkdir -Path $logFolder -Force
 	}
+
 	if (-not(Test-Path $reportFolder)) {
 		Write-Log -Message "creating report folder: $reportFolder"
 		mkdir -Path $reportFolder -Force 
 	}
+
 	$logfile        = Join-Path -Path $logFolder -ChildPath "Get-CMHealthCheck.log"
 	$poshversion    = $PSVersionTable.PSVersion.Major
 	$osversion      = (Get-CimInstance -ClassName Win32_OperatingSystem).Caption
@@ -83,10 +90,12 @@ function Get-CMHealthCheck {
 	$bLogValidation = $False
 	$ModuleVer      = (Get-Module "CMHealthCheck").Version -join '.'
 	$ModulePath     = Split-Path (Get-Module "CMHealthCheck").Path -Parent
+
 	if ([string]::IsNullOrEmpty($Healthcheckfilename)) {
 		$Healthcheckfilename = "$ModulePath\assets\cmhealthcheck.xml"
 		Write-Log -Message "Healthcheck file....: $HealthCheckFileName" -LogFile $logfile
 	}
+
 	Write-Host "CMHealthCheck $ModuleVer"
 	Write-Host "Gathering site and server information"
 
@@ -94,19 +103,23 @@ function Get-CMHealthCheck {
 	Write-Log -Message "Module version......: $ModuleVer" -LogFile $logfile
 	Write-Log -Message "Report Folder.......: $reportFolder" -LogFile $logfile
 	Write-Log -Message "Powershell version..: $poshversion" -LogFile $logfile
+
 	if (!(Test-Powershell64bit)) {
 		Write-Error "Powershell is not 64bit, yo G, we outta here."
 		break
 	}
+
 	Write-Log -Message "PowerShell mode.....: 64-bit" -LogFile $logfile
 	Write-Log -Message "Windows Version.....: $osversion" -LogFile $logfile
 	Write-Log -Message "SMS Provider........: $smsprovider" -LogFile $logfile
 
 	try {
+
 		if (-not (Test-Admin)) {
 			Write-Host "You are not running PowerShell as Administrator (run as Administrator), no futher action taken" -ForegroundColor Red
 			break
 		}
+
 		if (Test-Path -Path $reportFolder) {
 			if ($Overwrite -eq $true) {
 				Write-Log -Message "removing previous output folder $($reportFolder)..." -LogFile $logfile
@@ -122,23 +135,28 @@ function Get-CMHealthCheck {
 
 		Write-Log -Message "--------------- importing cmhealthcheck.xml ---------------" -LogFile $logfile
 		[xml]$HealthCheckXML = Get-CmHealthCheckFile -XmlSource $HealthCheckFilename
+
 		if (!(Test-Folder -Path $reportFolder)) {
 			Write-Log -Message "Unable to create $reportFolder" -Severity 3 -LogFile $logfile
 			break
 		}
+
 		if (($Overwrite) -and (Test-Path $logfile)) {
 			Remove-Item $logfile -Force
 			Write-Log -Message "previous log file cleared via overwrite request" -LogFile $logfile
 		}
+
 		Write-Log -Message "-------------- connecting to site ---------------------"
 
 		$WMISMSProvider = Get-CmWmiObject -Class "SMS_ProviderLocation" -NameSpace "Root\SMS" -ComputerName $smsprovider -LogFile $logfile
 		$SiteCodeNamespace = $($WMISMSProvider.SiteCode -join '').SubString(0,3) # thanks to Chris Shilt (07/21/20)
+
 		if ([string]::IsNullOrEmpty($SiteCodeNameSpace)) {
 			Write-Host "Error: Unable to connect to $SmsProvider. Exit." -ForegroundColor Red
 			Write-Log "unable to connect to $SmsProvider. Exiting here." -Severity 3 -LogFile $logfile
 			break
 		}
+
 		Write-Log -Message "Site Code........: $SiteCodeNamespace" -LogFile $logfile
 
 		$WMISMSSite = Get-CmWmiObject -Class "SMS_Site" -NameSpace "Root\SMS\Site_$SiteCodeNamespace" -Filter "SiteCode = '$SiteCodeNamespace'" -ComputerName $smsprovider -LogFile $logfile
@@ -172,18 +190,23 @@ function Get-CMHealthCheck {
 			Write-Log -Message "ERROR / Permission Denied on connection to SQL Server instance" -Category Error -Severity 3 -ShowMsg
 			exit
 		}
+
 		$arrServers = @()
 		$WMIServers = Get-CmWmiObject -Query "select distinct NetworkOSPath from SMS_SCI_SysResUse where NetworkOSPath not like '%.microsoft.com' and Type in (1,2,4,8)" -ComputerName $SmsProvider -NameSpace "root\sms\site_$SiteCodeNamespace" -LogFile $logfile
+		
 		foreach ($WMIServer in $WMIServers) {
 			$arrServers += $WMIServer.NetworkOSPath -replace '\\', ''
 		}
+		
 		if ($arrServers.Count -gt 0) {
 			Write-Log -Message $("Servers discovered: " + $arrServers -join(", ")) -LogFile $LogFile
 		}
 		else {
 			Write-Log -Message "no servers discovered." -LogFile $LogFile
 		}
+		
 		Write-Log -Message "----------------- creating reporting data table ------------------" -LogFile $LogFile
+		
 		$Fields = @("TableName", "XMLFile")
 		$ReportTable = New-CmDataTable -TableName $tableName -Fields $Fields
 

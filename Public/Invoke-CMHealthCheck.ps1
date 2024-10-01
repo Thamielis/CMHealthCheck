@@ -100,18 +100,23 @@ function Invoke-CMHealthCheck {
 		[parameter()][string] $Healthcheckfilename = "",
 		[parameter()][string] $MessagesFilename = ""
 	)
+
 	$Time1 = Get-Date
+
 	if ([string]::IsNullOrEmpty($SmsProvider)) {
 		Write-Warning "SmsProvider must be specified"
 		break
 	}
+
 	if ($env:USERPROFILE -eq 'c:\windows\system32\config\systemprofile') {
 		Write-Verbose "mapping temp locations for SYSTEM context"
 		$DataFolder = $env:TEMP
 		$PublishFolder = $env:TEMP
 	}
+
 	$ReportFolder = Join-Path $DataFolder "$(Get-Date -f 'yyyy-MM-dd')\$SmsProvider"
 	Write-Log -Message "report folder = $ReportFolder" -LogFile $logfile
+
 	try {
 		Write-Log -Message "report folder path = $ReportFolder" -LogFile $logfile
 		$getParams = @{
@@ -122,13 +127,18 @@ function Invoke-CMHealthCheck {
 			OverWrite     = $OverWrite
 			Verbose       = $VerbosePreference
 		}
+
 		Write-Log -Message "calling Get-CMHealthCheck with parameter set" -LogFile $logfile
+		
 		Get-CMHealthCheck @getParams
+
 	}
 	catch {
 		Write-Error $_.Exception.Message
 	}
+
 	Write-Log -Message "------------------ begin report publishing ---------------------" -LogFile $logfile
+
 	try {
 		if (Test-Path $ReportFolder) {
 			Write-Log -Message "calling Export-CMHealthReport with parameter set" -LogFile $logfile
